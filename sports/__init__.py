@@ -9,8 +9,10 @@ except importlib_metadata.PackageNotFoundError:
 
 from sports.common.core import MeasurementUnit
 from sports.common.view import ViewTransformer
+from sports.common.team import TeamClassifier
 
 __all__ = [
     "MeasurementUnit",
+    "TeamClassifier",
     "ViewTransformer"
 ]
