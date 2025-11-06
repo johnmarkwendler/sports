@@ -409,3 +409,90 @@ def draw_made_and_miss_on_court(
         cv2.line(court, (x0, y1), (x1, y0), miss_color.as_bgr(), missed_stroke)
 
     return court
+
+
+def draw_points_on_court(
+    config: CourtConfiguration,
+    xy: Optional[np.ndarray] = None,
+    labels: Optional[list[str]] = None,
+    fill_color: Optional[sv.Color] = sv.Color.BLACK,
+    text_color: sv.Color = sv.Color.WHITE,
+    edge_color: Optional[sv.Color] = sv.Color.WHITE,
+    size: int = 30,
+    edge_thickness: Optional[int] = None,
+    scale: float = 20,
+    padding: int = 50,
+    line_thickness: int = 6,
+    court: Optional[np.ndarray] = None,
+) -> np.ndarray:
+    """
+    Draw points on the court.
+    Points render as circles with optional fill, edge, and center labels.
+    """
+    if court is None:
+        court = draw_court(
+            config=config,
+            scale=scale,
+            padding=padding,
+            line_thickness=line_thickness,
+        )
+
+    if xy is None or np.size(xy) == 0:
+        return court
+
+    pts = np.atleast_2d(xy)
+    n = pts.shape[0]
+
+    labels = labels if labels is not None else [None] * n
+    if len(labels) < n:
+        labels = list(labels) + [None] * (n - len(labels))
+
+    stroke = edge_thickness if edge_thickness is not None else max(2, line_thickness // 2)
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    font_scale = max(0.4, size / 28.0)
+    font_thickness = max(1, size // 8)
+
+    for i in range(n):
+        cx, cy = _to_pixel(tuple(pts[i]), scale=scale, padding=padding)
+
+        # Face (fill)
+        if fill_color is not None:
+            cv2.circle(
+                img=court,
+                center=(cx, cy),
+                radius=size,
+                color=fill_color.as_bgr(),
+                thickness=-1,
+                lineType=cv2.LINE_AA,
+            )
+
+        # Edge (outline)
+        if edge_color is not None and stroke > 0:
+            cv2.circle(
+                img=court,
+                center=(cx, cy),
+                radius=size,
+                color=edge_color.as_bgr(),
+                thickness=stroke,
+                lineType=cv2.LINE_AA,
+            )
+
+        # Label
+        label = labels[i]
+        if label is not None and str(label) != "":
+            text = str(label)
+            (tw, th), base = cv2.getTextSize(text, font, font_scale, font_thickness)
+            tx = int(cx - tw / 2)
+            ty = int(cy + th / 2)
+            cv2.putText(
+                img=court,
+                text=text,
+                org=(tx, ty),
+                fontFace=font,
+                fontScale=font_scale,
+                color=text_color.as_bgr(),
+                thickness=font_thickness,
+                lineType=cv2.LINE_AA,
+            )
+
+    return court
