@@ -10,8 +10,10 @@ except importlib_metadata.PackageNotFoundError:
 from sports.common.core import MeasurementUnit
 from sports.common.view import ViewTransformer
 from sports.common.team import TeamClassifier
+from sports.common.temporal import ConsecutiveValueTracker
 
 __all__ = [
+    "ConsecutiveValueTracker",
     "MeasurementUnit",
     "TeamClassifier",
     "ViewTransformer"
