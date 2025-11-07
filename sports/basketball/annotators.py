@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 import supervision as sv
-from typing import Tuple, Optional
+from typing import Tuple, Optional, List
 from sports.basketball.config import CourtConfiguration
 from sports.common.core import MeasurementUnit
 
@@ -494,5 +494,81 @@ def draw_points_on_court(
                 thickness=font_thickness,
                 lineType=cv2.LINE_AA,
             )
+
+    return court
+
+
+def draw_paths_on_court(
+    config: CourtConfiguration,
+    paths: List[np.ndarray],
+    color: Optional[sv.Color] = sv.Color.BLACK,
+    thickness: Optional[int] = None,
+    scale: float = 20,
+    padding: int = 50,
+    line_thickness: int = 6,
+    court: Optional[np.ndarray] = None,
+) -> np.ndarray:
+    """
+    Draw time-ordered paths as polylines in court coordinates.
+    Each path is an array of shape (T, 2) with x, y in court units.
+    NaN rows split a path into multiple segments.
+    """
+    if court is None:
+        court = draw_court(
+            config=config,
+            scale=scale,
+            padding=padding,
+            line_thickness=line_thickness,
+        )
+
+    if not paths or color is None:
+        return court
+
+    stroke = thickness if thickness is not None else line_thickness
+    bgr = color.as_bgr()
+
+    def to_segments(pts: np.ndarray) -> list[np.ndarray]:
+        pts = np.atleast_2d(pts).astype(float)
+        segments = []
+        cur = []
+        for p in pts:
+            if np.isnan(p).any():
+                if len(cur) > 0:
+                    segments.append(np.asarray(cur, dtype=float))
+                    cur = []
+            else:
+                cur.append(p)
+        if len(cur) > 0:
+            segments.append(np.asarray(cur, dtype=float))
+        return segments
+
+    for path in paths:
+        if path is None or np.size(path) == 0:
+            continue
+
+        for seg in to_segments(path):
+            if seg.shape[0] >= 2:
+                poly = np.array(
+                    [[_to_pixel((float(x), float(y)), scale, padding) for x, y in seg]],
+                    dtype=np.int32,
+                )
+                cv2.polylines(
+                    img=court,
+                    pts=poly,
+                    isClosed=False,
+                    color=bgr,
+                    thickness=stroke,
+                    lineType=cv2.LINE_AA,
+                )
+            elif seg.shape[0] == 1:
+                cx, cy = _to_pixel((float(seg[0, 0]), float(seg[0, 1])), scale, padding)
+                cv2.circle(
+                    img=court,
+                    center=(cx, cy),
+                    radius=max(1, stroke // 2),
+                    color=bgr,
+                    thickness=-1,
+                    lineType=cv2.LINE_AA,
+                )
 
     return court
